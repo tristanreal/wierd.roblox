@@ -1,33 +1,35 @@
 local Players = game:GetService("Players")
-local DataStoreService = game:GetService("DataStoreService")
-local BanStore = DataStoreService:GetDataStore("BannedPlayers")
+local ServerStorage = game:GetService("ServerStorage")
 
 local OWNER_USERNAME = "sub2itr" -- Your username
-local TOOL_NAME = "BanHammer" -- Name of the hammer tool
+local TOOL_NAME = "BanHammer" -- Name of the Ban Hammer tool
 
--- Function to check if a player is the owner or has the special username
-local function isOwner(player)
+-- Function to check if a player is authorized to use the tool
+local function isAuthorized(player)
     return player.UserId == game.CreatorId or player.Name == OWNER_USERNAME
 end
 
--- Function to ban a player
-local function banPlayer(playerToBan)
-    BanStore:SetAsync(playerToBan.UserId, true)
-    playerToBan:Kick("You have been permanently banned by the game owner.")
-end
-
--- Check if a player is banned when they join
+-- Handle giving the tool to authorized players
 Players.PlayerAdded:Connect(function(player)
-    local isBanned = BanStore:GetAsync(player.UserId)
-    if isBanned then
-        player:Kick("You are banned from this game.")
+    if isAuthorized(player) then
+        -- Give the tool to the player
+        local tool = ServerStorage:FindFirstChild(TOOL_NAME)
+        if tool then
+            local clonedTool = tool:Clone()
+            clonedTool.Parent = player.Backpack
+        end
     end
 end)
 
--- Give the ban hammer to the owner
+-- Handle kicking unauthorized users if they somehow equip the hammer
 Players.PlayerAdded:Connect(function(player)
-    if isOwner(player) then
-        local hammer = game.ServerStorage:FindFirstChild(TOOL_NAME):Clone()
-        hammer.Parent = player.Backpack
-    end
+    player.CharacterAdded:Connect(function(character)
+        character.ChildAdded:Connect(function(child)
+            if child:IsA("Tool") and child.Name == TOOL_NAME then
+                if not isAuthorized(player) then
+                    player:Kick("You do not have permission for the Ban Hammer!")
+                end
+            end
+        end)
+    end)
 end)
